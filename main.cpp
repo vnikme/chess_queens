@@ -90,18 +90,18 @@ class TState {
 };
 
 
-TState ConstructState(const std::vector<size_t> &p0s, int p1) {
+TState ConstructState(const std::vector<size_t> &p0s, size_t p1) {
     TState result;
-    if (p1 != -1)
-        result.Put(1, p1 / 8, p1 % 8);
+    result.Put(1, p1 / 8, p1 % 8);
     for (size_t p0 : p0s)
         result.Put(0, p0 / 8, p0 % 8);
     return result;
 }
 
-void DoGenerateAllPositions(std::vector<size_t> p0s, int p1, size_t p0Start, size_t p0Count, std::vector<TState> &result) {
+void DoGenerateAllPositions(std::vector<size_t> p0s, size_t p1, size_t p0Start, size_t p0Count, std::vector<TState> &result) {
     if (p0Count == 0) {
-        result.push_back(ConstructState(p0s, p1));
+        auto pos = ConstructState(p0s, p1);
+        result.push_back(pos);
         return;
     }
     for (size_t p0 = p0Start; p0 < 64; ++p0) {
@@ -115,7 +115,7 @@ void DoGenerateAllPositions(std::vector<size_t> p0s, int p1, size_t p0Start, siz
 
 std::vector<TState> GenerateAllPositions(size_t p0) {
     std::vector<TState> result;
-    for (int p1 = -1; p1 < 64; ++p1)
+    for (size_t p1 = 0; p1 < 64; ++p1)
         for (size_t i = 0; i <= p0; ++i)
             DoGenerateAllPositions(std::vector<size_t>(), p1, 0, i, result);
     return result;
@@ -130,37 +130,100 @@ bool IsTerminalExist(const TState &pos) {
     return false;
 }
 
-bool IsAllFromSet(const TState &pos, const std::set<TState> &positions) {
+int MaxDistanceToSet(const TState &pos, const std::map<TState, int> &positions) {
+    int result = -1;
     const auto &moves = pos.AllMoves(1);
     for (const auto &move : moves) {
-        if (positions.find(move) == positions.end())
-            return false;
+        const auto it = positions.find(move);
+        if (it == positions.end())
+            return -1;
+        if (it->second > result)
+            result = it->second;
     }
-    return true;
+    return result;
+}
+
+int MinDistanceToSet(const TState &pos, const std::map<TState, int> &positions) {
+    int result = -1;
+    const auto &moves = pos.AllMoves(0);
+    for (const auto &move : moves) {
+        const auto it = positions.find(move);
+        if (it == positions.end())
+            continue;
+        if (result == -1 || it->second < result)
+            result = it->second;
+    }
+    return result;
+}
+
+
+void BuildPath(TState pos, const std::map<TState, int> &dist0, const std::map<TState, int> &dist1) {
+    for (;;) {
+        pos.Print();
+        std::cout << std::endl;
+        const auto it = dist0.find(pos);
+        if (it == dist0.end())
+            throw std::logic_error("Can't build path");
+        int length0 = it->second;
+        if (length0 == 0)
+            break;
+        for (const auto &move : pos.AllMoves(0)) {
+            const auto it = dist1.find(move);
+            if (it != dist1.end() && it->second == length0) {
+                pos = it->first;
+                break;
+            }
+        }
+        pos.Print();
+        std::cout << std::endl;
+        for (const auto &move : pos.AllMoves(1)) {
+            const auto it = dist0.find(move);
+            if (it != dist0.end() && it->second + 1 == length0) {
+                pos = it->first;
+                break;
+            }
+        }
+    }
 }
 
 int main() {
     auto positions = GenerateAllPositions(4);
     std::cout << positions.size() << std::endl;
-    std::set<TState> term;
+    std::map<TState, int> dist0, dist1;
     for (const auto &pos : positions) {
-        if (!pos.IsEmpty(1) && IsTerminalExist(pos)) {
-            term.insert(pos);
+        if (IsTerminalExist(pos)) {
+            dist0[pos] = 0;
         }
     }
-    std::cout << term.size() << std::endl;
-    std::set<TState> predTerm;
-    for (const auto &pos : positions) {
-        if (!pos.IsEmpty(1) && IsAllFromSet(pos, term)) {
-            predTerm.insert(pos);
+    std::cout << dist0.size() << std::endl;
+    int maxDist = -1;
+    TState maxPos;
+    for (;;) {
+        size_t oldSize0 = dist0.size();
+        for (const auto &pos : positions) {
+            int posDist = MaxDistanceToSet(pos, dist0);
+            if (posDist != -1) {
+                dist1[pos] = posDist + 1;
+            }
         }
+        std::cout << dist1.size() << std::endl;
+        for (const auto &pos : positions) {
+            if (dist0.find(pos) != dist0.end())
+                continue;
+            int posDist = MinDistanceToSet(pos, dist1);
+            if (posDist != -1) {
+                dist0[pos] = posDist;
+                if (posDist > maxDist) {
+                    maxDist = posDist;
+                    maxPos = pos;
+                }
+            }
+        }
+        std::cout << dist0.size() << std::endl;
+        if (oldSize0 == dist0.size())
+            break;
     }
-    std::cout << predTerm.size() << std::endl;
-    return 0;
-    for (const auto &pos : predTerm) {
-        pos.Print();
-        std::cout << std::endl;
-    }
+    BuildPath(maxPos, dist0, dist1);
     return 0;
 }
 
