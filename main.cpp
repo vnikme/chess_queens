@@ -130,17 +130,34 @@ bool IsTerminalExist(const TState &pos) {
     return false;
 }
 
+bool IsAllFromSet(const TState &pos, const std::set<TState> &positions) {
+    const auto &moves = pos.AllMoves(1);
+    for (const auto &move : moves) {
+        if (positions.find(move) == positions.end())
+            return false;
+    }
+    return true;
+}
+
 int main() {
     auto positions = GenerateAllPositions(4);
     std::cout << positions.size() << std::endl;
-    std::vector<TState> term;
+    std::set<TState> term;
     for (const auto &pos : positions) {
         if (!pos.IsEmpty(1) && IsTerminalExist(pos)) {
-            term.push_back(pos);
+            term.insert(pos);
         }
     }
     std::cout << term.size() << std::endl;
-    for (const auto &pos : term) {
+    std::set<TState> predTerm;
+    for (const auto &pos : positions) {
+        if (!pos.IsEmpty(1) && IsAllFromSet(pos, term)) {
+            predTerm.insert(pos);
+        }
+    }
+    std::cout << predTerm.size() << std::endl;
+    return 0;
+    for (const auto &pos : predTerm) {
         pos.Print();
         std::cout << std::endl;
     }
