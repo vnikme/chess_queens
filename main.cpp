@@ -8,6 +8,9 @@
 
 class TState {
     public:
+        TState() {
+            Players[0] = Players[1] = 0;
+        }
         void Put(size_t player, int a, int b) {
             if (player > 1)
                 throw std::logic_error("Player should be 0 or 1");
@@ -78,7 +81,7 @@ class TState {
                 tmp.Put(player, a, b);
                 bool hasOpposite = (tmp.Players[1 - player] & (1l << (a * 8 + b)));
                 if (hasOpposite)                                    // Beats opposite
-                    tmp.Players[1 - player] &= (1l << (a * 8 + b));
+                    tmp.Players[1 - player] &= ~(1l << (a * 8 + b));
                 moves.push_back(tmp);
                 if (hasOpposite)
                     break;
@@ -118,10 +121,28 @@ std::vector<TState> GenerateAllPositions(size_t p0) {
     return result;
 }
 
+bool IsTerminalExist(const TState &pos) {
+    const auto &moves = pos.AllMoves(0);
+    for (const auto &move : moves) {
+        if (move.IsEmpty(1))
+            return true;
+    }
+    return false;
+}
+
 int main() {
-    for (size_t i = 0; i <= 5; ++i) {
-        auto positions = GenerateAllPositions(i);
-        std::cout << i << ": " << positions.size() << std::endl;
+    auto positions = GenerateAllPositions(4);
+    std::cout << positions.size() << std::endl;
+    std::vector<TState> term;
+    for (const auto &pos : positions) {
+        if (!pos.IsEmpty(1) && IsTerminalExist(pos)) {
+            term.push_back(pos);
+        }
+    }
+    std::cout << term.size() << std::endl;
+    for (const auto &pos : term) {
+        pos.Print();
+        std::cout << std::endl;
     }
     return 0;
 }
