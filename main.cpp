@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <exception>
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <set>
@@ -11,18 +12,25 @@ class TState {
         TState() {
             Players[0] = Players[1] = 0;
         }
+
         void Put(size_t player, int a, int b) {
             if (player > 1)
                 throw std::logic_error("Player should be 0 or 1");
-            Players[player] |= (1l << (a * 8 + b));
+            Players[player] |= (1ul << (a * 8 + b));
+        }
+
+        unsigned long long GetPlayerPosition(size_t player) const {
+            if (player > 1)
+                throw std::logic_error("Player should be 0 or 1");
+            return Players[player];
         }
 
         void Print() const {
             for (size_t i = 0; i < 8; ++i) {
                 for (size_t j = 0; j < 8; ++j) {
-                    if (Players[0] & (1l << (i * 8 + j)))
+                    if (Players[0] & (1ul << (i * 8 + j)))
                         std::cout << 'w';
-                    else if (Players[1] & (1l << (i * 8 + j)))
+                    else if (Players[1] & (1ul << (i * 8 + j)))
                         std::cout << 'b';
                     else
                         std::cout << '.';
@@ -54,7 +62,7 @@ class TState {
             if (player > 1)
                 throw std::logic_error("Player should be 0 or 1");
             for (size_t figure = 0; figure < 64; ++figure) {
-                if ((Players[player] & (1l << figure)) == 0)
+                if ((Players[player] & (1ul << figure)) == 0)
                     continue;
                 for (int da = -1; da <= 1; ++da)
                     for (int db = -1; db <= 1; ++db)
@@ -65,23 +73,23 @@ class TState {
         }
 
     private:
-        long long Players[2];
+        unsigned long long Players[2];
 
         void AddMoves(std::vector<TState> &moves, size_t player, size_t figure, int directionA, int directionB) const {
             TState obj(*this);
-            obj.Players[player] &= ~(1l << figure);
+            obj.Players[player] &= ~(1ul << figure);
             int x = figure / 8, y = figure % 8;
             for (int i = 1; ; ++i) {
                 int a = x + i * directionA, b = y + i * directionB;
                 if (a < 0 || a >= 8 || b < 0 || b >= 8)
                     break;                                          // Out of field
-                if (obj.Players[player] & (1l << (a * 8 + b)))
+                if (obj.Players[player] & (1ul << (a * 8 + b)))
                     break;                                          // Same color in this direction
                 TState tmp(obj);
                 tmp.Put(player, a, b);
-                bool hasOpposite = (tmp.Players[1 - player] & (1l << (a * 8 + b)));
+                bool hasOpposite = (tmp.Players[1 - player] & (1ul << (a * 8 + b)));
                 if (hasOpposite)                                    // Beats opposite
-                    tmp.Players[1 - player] &= ~(1l << (a * 8 + b));
+                    tmp.Players[1 - player] &= ~(1ul << (a * 8 + b));
                 moves.push_back(tmp);
                 if (hasOpposite)
                     break;
@@ -222,6 +230,16 @@ int main() {
         std::cout << dist0.size() << std::endl;
         if (oldSize0 == dist0.size())
             break;
+    }
+    {
+        std::ofstream fout("dist.txt");
+        fout << positions.size() << std::endl;
+        for (const auto &pos : positions) {
+            fout << pos.GetPlayerPosition(0) << ' ' << pos.GetPlayerPosition(1);
+            const auto it0 = dist0.find(pos);
+            const auto it1 = dist1.find(pos);
+            fout << ' ' << (it0 != dist0.end() ? it0->second : -1) << ' ' << (it1 != dist1.end() ? it1->second : -1) << std::endl;
+        }
     }
     BuildPath(maxPos, dist0, dist1);
     return 0;
