@@ -3,7 +3,6 @@
 #include <iostream>
 #include <map>
 #include <set>
-#include <utility>
 #include <vector>
 
 
@@ -12,24 +11,27 @@ class TState {
         void Put(size_t player, int a, int b) {
             if (player > 1)
                 throw std::logic_error("Player should be 0 or 1");
-            Players[player].emplace_back(a, b);
-            SortUnique(Players[player]);
+            Players[player] |= (1l << (a * 8 + b));
         }
 
         void Print() const {
-            Print(Players[0]);
-            Print(Players[1]);;
+            for (size_t i = 0; i < 8; ++i) {
+                for (size_t j = 0; j < 8; ++j) {
+                    if (Players[0] & (1l << (i * 8 + j)))
+                        std::cout << 'w';
+                    else if (Players[1] & (1l << (i * 8 + j)))
+                        std::cout << 'b';
+                    else
+                        std::cout << '.';
+                }
+                std::cout << std::endl;
+            }
         }
 
         int Compare(const TState &rgt) const {
             for (size_t i = 0; i < 2; ++i) {
-                const auto &p = Players[i];
-                const auto &rp = rgt.Players[i];
-                if (p.size() != rp.size())
-                    return p.size() < rp.size() ? -1 : 1;
-                for (size_t i = 0, cnt = p.size(); i < cnt; ++i)
-                    if (p[i] != rp[i])
-                        return p[i] < rp[i] ? -1 : 1;
+                if (Players[i] != rgt.Players[i])
+                    return Players[i] < rgt.Players[i] ? -1 : 1;
             }
             return 0;
         }
@@ -38,64 +40,47 @@ class TState {
             return Compare(rgt) < 0;
         }
 
-        size_t Count(size_t player) const {
+        size_t IsEmpty(size_t player) const {
             if (player > 1)
                 throw std::logic_error("Player should be 0 or 1");
-            return Players[player].size();
+            return Players[player] == 0;
         }
 
         std::vector<TState> AllMoves(size_t player) const {
             std::vector<TState> result;
             if (player > 1)
                 throw std::logic_error("Player should be 0 or 1");
-            for (size_t figure = 0; figure < Players[player].size(); ++figure)
+            for (size_t figure = 0; figure < 64; ++figure) {
+                if ((Players[player] & (1l << figure)) == 0)
+                    continue;
                 for (int da = -1; da <= 1; ++da)
                     for (int db = -1; db <= 1; ++db)
                         if (da != 0 || db != 0)
                             AddMoves(result, player, figure, da, db);
+            }
             return result;
         }
 
     private:
-        std::vector<std::pair<int, int>> Players[2];
-
-        static int Check(const std::vector<std::pair<int, int>> &positions, int a, int b) {
-            auto p = std::make_pair(a, b);
-            auto it = std::lower_bound(positions.begin(), positions.end(), p);
-            if (it == positions.end() || *it != p)
-                return -1;
-            return it - positions.begin();;
-        }
-
-        static void Print(const std::vector<std::pair<int, int>> &positions) {
-            std::cout << positions.size();
-            for (const auto &obj : positions)
-                std::cout << " (" << obj.first << ", " << obj.second << ')';
-            std::cout << std::endl;
-        }
-
-        static void SortUnique(std::vector<std::pair<int, int>> &positions) {
-            std::sort(positions.begin(), positions.end());
-            positions.erase(std::unique(positions.begin(), positions.end()), positions.end());
-        }
+        long long Players[2];
 
         void AddMoves(std::vector<TState> &moves, size_t player, size_t figure, int directionA, int directionB) const {
             TState obj(*this);
-            auto pos = obj.Players[player][figure];
-            obj.Players[player].erase(obj.Players[player].begin() + figure);
+            obj.Players[player] &= ~(1l << figure);
+            int x = figure / 8, y = figure % 8;
             for (int i = 1; ; ++i) {
-                int a = pos.first + i * directionA, b = pos.second + i * directionB;
+                int a = x + i * directionA, b = y + i * directionB;
                 if (a < 0 || a >= 8 || b < 0 || b >= 8)
                     break;                                          // Out of field
-                if (Check(obj.Players[player], a, b) != -1)
+                if (obj.Players[player] & (1l << (a * 8 + b)))
                     break;                                          // Same color in this direction
                 TState tmp(obj);
                 tmp.Put(player, a, b);
-                int index = Check(tmp.Players[1 - player], a, b);
-                if (index != -1)                                    // Beat opposite
-                    tmp.Players[1 - player].erase(tmp.Players[1 - player].begin() + index);
+                bool hasOpposite = (tmp.Players[1 - player] & (1l << (a * 8 + b)));
+                if (hasOpposite)                                    // Beats opposite
+                    tmp.Players[1 - player] &= (1l << (a * 8 + b));
                 moves.push_back(tmp);
-                if (index != -1)
+                if (hasOpposite)
                     break;
             }
         }
