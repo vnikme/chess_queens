@@ -123,9 +123,11 @@ void DoGenerateAllPositions(std::vector<size_t> p0s, size_t p1, size_t p0Start, 
 
 std::vector<TState> GenerateAllPositions(size_t p0) {
     std::vector<TState> result;
-    for (size_t p1 = 0; p1 < 64; ++p1)
-        for (size_t i = 0; i <= p0; ++i)
+    for (size_t p1 = 0; p1 < 64; ++p1) {
+        for (size_t i = 0; i <= p0; ++i) {
             DoGenerateAllPositions(std::vector<size_t>(), p1, 0, i, result);
+        }
+    }
     return result;
 }
 
@@ -164,7 +166,6 @@ int MinDistanceToSet(const TState &pos, const std::map<TState, int> &positions) 
     return result;
 }
 
-
 void BuildPath(TState pos, const std::map<TState, int> &dist0, const std::map<TState, int> &dist1) {
     for (;;) {
         pos.Print();
@@ -194,10 +195,7 @@ void BuildPath(TState pos, const std::map<TState, int> &dist0, const std::map<TS
     }
 }
 
-int main() {
-    auto positions = GenerateAllPositions(4);
-    std::cout << positions.size() << std::endl;
-    std::map<TState, int> dist0, dist1;
+void SearchPaths(const std::vector<TState> &positions, std::map<TState, int> &dist0, std::map<TState, int> &dist1) {
     for (const auto &pos : positions) {
         if (IsTerminalExist(pos)) {
             dist0[pos] = 0;
@@ -231,17 +229,36 @@ int main() {
         if (oldSize0 == dist0.size())
             break;
     }
-    {
-        std::ofstream fout("dist.txt");
-        fout << positions.size() << std::endl;
-        for (const auto &pos : positions) {
-            fout << pos.GetPlayerPosition(0) << ' ' << pos.GetPlayerPosition(1);
-            const auto it0 = dist0.find(pos);
-            const auto it1 = dist1.find(pos);
-            fout << ' ' << (it0 != dist0.end() ? it0->second : -1) << ' ' << (it1 != dist1.end() ? it1->second : -1) << std::endl;
+    //BuildPath(maxPos, dist0, dist1);
+}
+
+void DumpDistances(const std::vector<TState> &positions, std::map<TState, int> &dist0, std::map<TState, int> &dist1) {
+    std::ofstream fout("dist.txt");
+    fout << positions.size() << std::endl;
+    for (const auto &pos : positions) {
+        fout << pos.GetPlayerPosition(0) << ' ' << pos.GetPlayerPosition(1);
+        const auto it0 = dist0.find(pos);
+        const auto it1 = dist1.find(pos);
+        fout << ' ' << (it0 != dist0.end() ? it0->second : -1) << ' ' << (it1 != dist1.end() ? it1->second : -1) << std::endl;
+    } 
+}
+
+void PrintUnreachable(const std::vector<TState> &positions, const std::map<TState, int> &dist0) {
+    for (const auto &pos : positions) {
+        if (dist0.find(pos) == dist0.end()) {
+            pos.Print();
+            std::cout << std::endl;
         }
     }
-    BuildPath(maxPos, dist0, dist1);
+}
+
+int main() {
+    auto positions = GenerateAllPositions(3);
+    std::cout << positions.size() << std::endl;
+    std::map<TState, int> dist0, dist1;
+    SearchPaths(positions, dist0, dist1);
+    DumpDistances(positions, dist0, dist1);
+    PrintUnreachable(positions, dist0);
     return 0;
 }
 
