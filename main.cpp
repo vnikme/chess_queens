@@ -253,7 +253,7 @@ void PrintUnreachable(const std::vector<TState> &positions, const std::map<TStat
 }
 
 int main() {
-    auto positions = GenerateAllPositions(3);
+    auto positions = GenerateAllPositions(4);
     std::cout << positions.size() << std::endl;
     std::map<TState, int> dist0, dist1;
     SearchPaths(positions, dist0, dist1);
