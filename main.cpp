@@ -141,11 +141,13 @@ void DoGenerateAllPositions(std::vector<size_t> p0s, size_t p1, size_t p0Start, 
 
 std::vector<TState> GenerateAllPositions(size_t p0) {
     std::vector<TState> result;
-    for (size_t p1 = 0; p1 < 64; ++p1) {
-        for (size_t i = 0; i <= p0; ++i) {
+    for (size_t i = 0; i <= p0; ++i) {
+        for (size_t p1 = 0; p1 < 64; ++p1) {
             DoGenerateAllPositions(std::vector<size_t>(), p1, 0, i, result);
         }
+        std::cout << result.size() << std::endl;
     }
+    std::cout << std::endl;
     return result;
 }
 
@@ -225,6 +227,8 @@ void SearchPaths(const std::vector<TState> &positions, TAssocArray &dist0, TAsso
     for (;;) {
         size_t oldSize0 = dist0.size();
         for (const auto &pos : positions) {
+            if (dist1.find(pos) != dist1.end())
+                continue;
             int posDist = MaxDistanceToSet(pos, dist0);
             if (posDist != -1) {
                 dist1[pos] = posDist + 1;
@@ -271,12 +275,11 @@ void PrintUnreachable(const std::vector<TState> &positions, const TAssocArray &d
 }
 
 int main() {
-    auto positions = GenerateAllPositions(3);
-    std::cout << positions.size() << std::endl;
+    auto positions = GenerateAllPositions(4);
     TAssocArray dist0, dist1;
     SearchPaths(positions, dist0, dist1);
-    //DumpDistances(positions, dist0, dist1);
-    //PrintUnreachable(positions, dist0);
+    DumpDistances(positions, dist0, dist1);
+    PrintUnreachable(positions, dist0);
     return 0;
 }
 
