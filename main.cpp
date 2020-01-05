@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
-#include <set>
+#include <unordered_map>
 #include <vector>
 
 
@@ -49,6 +49,10 @@ class TState {
 
         bool operator < (const TState &rgt) const {
             return Compare(rgt) < 0;
+        }
+
+        bool operator == (const TState &rgt) const {
+            return Compare(rgt) == 0;
         }
 
         size_t IsEmpty(size_t player) const {
@@ -98,6 +102,20 @@ class TState {
 };
 
 
+namespace std {
+    template <>
+    struct hash<TState>
+    {
+        size_t operator()(const TState &s) const {
+            return s.GetPlayerPosition(0) ^ s.GetPlayerPosition(1);
+        }
+    };
+}
+
+//using TAssocArray = std::map<TState, int>;
+using TAssocArray = std::unordered_map<TState, int>;
+
+
 TState ConstructState(const std::vector<size_t> &p0s, size_t p1) {
     TState result;
     result.Put(1, p1 / 8, p1 % 8);
@@ -140,7 +158,7 @@ bool IsTerminalExist(const TState &pos) {
     return false;
 }
 
-int MaxDistanceToSet(const TState &pos, const std::map<TState, int> &positions) {
+int MaxDistanceToSet(const TState &pos, const TAssocArray &positions) {
     int result = -1;
     const auto &moves = pos.AllMoves(1);
     for (const auto &move : moves) {
@@ -153,7 +171,7 @@ int MaxDistanceToSet(const TState &pos, const std::map<TState, int> &positions) 
     return result;
 }
 
-int MinDistanceToSet(const TState &pos, const std::map<TState, int> &positions) {
+int MinDistanceToSet(const TState &pos, const TAssocArray &positions) {
     int result = -1;
     const auto &moves = pos.AllMoves(0);
     for (const auto &move : moves) {
@@ -166,7 +184,7 @@ int MinDistanceToSet(const TState &pos, const std::map<TState, int> &positions) 
     return result;
 }
 
-void BuildPath(TState pos, const std::map<TState, int> &dist0, const std::map<TState, int> &dist1) {
+void BuildPath(TState pos, const TAssocArray &dist0, const TAssocArray &dist1) {
     for (;;) {
         pos.Print();
         std::cout << std::endl;
@@ -195,7 +213,7 @@ void BuildPath(TState pos, const std::map<TState, int> &dist0, const std::map<TS
     }
 }
 
-void SearchPaths(const std::vector<TState> &positions, std::map<TState, int> &dist0, std::map<TState, int> &dist1) {
+void SearchPaths(const std::vector<TState> &positions, TAssocArray &dist0, TAssocArray &dist1) {
     for (const auto &pos : positions) {
         if (IsTerminalExist(pos)) {
             dist0[pos] = 0;
@@ -232,7 +250,7 @@ void SearchPaths(const std::vector<TState> &positions, std::map<TState, int> &di
     //BuildPath(maxPos, dist0, dist1);
 }
 
-void DumpDistances(const std::vector<TState> &positions, std::map<TState, int> &dist0, std::map<TState, int> &dist1) {
+void DumpDistances(const std::vector<TState> &positions, TAssocArray &dist0, TAssocArray &dist1) {
     std::ofstream fout("dist.txt");
     fout << positions.size() << std::endl;
     for (const auto &pos : positions) {
@@ -243,7 +261,7 @@ void DumpDistances(const std::vector<TState> &positions, std::map<TState, int> &
     } 
 }
 
-void PrintUnreachable(const std::vector<TState> &positions, const std::map<TState, int> &dist0) {
+void PrintUnreachable(const std::vector<TState> &positions, const TAssocArray &dist0) {
     for (const auto &pos : positions) {
         if (dist0.find(pos) == dist0.end()) {
             pos.Print();
@@ -253,12 +271,12 @@ void PrintUnreachable(const std::vector<TState> &positions, const std::map<TStat
 }
 
 int main() {
-    auto positions = GenerateAllPositions(4);
+    auto positions = GenerateAllPositions(3);
     std::cout << positions.size() << std::endl;
-    std::map<TState, int> dist0, dist1;
+    TAssocArray dist0, dist1;
     SearchPaths(positions, dist0, dist1);
-    DumpDistances(positions, dist0, dist1);
-    PrintUnreachable(positions, dist0);
+    //DumpDistances(positions, dist0, dist1);
+    //PrintUnreachable(positions, dist0);
     return 0;
 }
 
