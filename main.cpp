@@ -114,6 +114,7 @@ namespace std {
 
 //using TAssocArray = std::map<TState, int>;
 using TAssocArray = std::unordered_map<TState, int>;
+//using TAssocArray = absl::flat_hash_map<TState, int>;
 
 
 TState ConstructState(const std::vector<size_t> &p0s, size_t p1) {
